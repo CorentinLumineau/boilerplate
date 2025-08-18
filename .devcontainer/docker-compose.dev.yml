@@ -1,0 +1,25 @@
+services:
+  devcontainer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ../..:/workspaces:cached
+      - /var/run/docker.sock:/var/run/docker-host.sock
+    working_dir: /workspaces/boilerplate
+    command: sleep infinity
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+    environment:
+      - DATABASE_URL=postgresql://auth_user:auth_password@postgres:5432/auth_db
+      - NODE_ENV=development
+      - DOCKER_HOST=unix:///var/run/docker-host.sock
+
+  # Extend the postgres service to ensure it's available
+  postgres:
+    extends:
+      file: ../docker-compose.yml
+      service: postgres
