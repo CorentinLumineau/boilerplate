@@ -1,0 +1,22 @@
+services:
+  devcontainer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ../..:/workspaces:cached
+      - /workspaces/boilerplate/node_modules
+      - /workspaces/boilerplate/apps/web/node_modules
+    working_dir: /workspaces/boilerplate
+    command: sleep infinity
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  postgres:
+    # Extend the existing postgres service from docker-compose.yml
+    # No changes needed - using existing configuration with environment variables

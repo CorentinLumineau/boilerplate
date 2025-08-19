@@ -1,0 +1,85 @@
+{
+  "name": "Boilerplate Development",
+  "dockerComposeFile": ["../docker-compose.yml", "docker-compose.dev.yml"],
+  "service": "devcontainer",
+  "workspaceFolder": "/workspaces/boilerplate",
+  "shutdownAction": "stopCompose",
+
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20",
+      "nodeGypDependencies": true,
+      "installYarnUsingApt": false
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "installDirectlyFromGitHubRelease": true
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "typescript.preferences.importModuleSpecifier": "relative",
+        "typescript.suggest.includeCompletionsForImportStatements": true,
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit",
+          "source.organizeImports": "explicit"
+        },
+        "files.associations": {
+          "*.css": "tailwindcss"
+        },
+        "emmet.includeLanguages": {
+          "javascript": "javascriptreact",
+          "typescript": "typescriptreact"
+        },
+        "tailwindCSS.experimental.classRegex": [
+          ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+          ["cx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+        ]
+      },
+      "extensions": [
+        "ms-vscode.vscode-typescript-next",
+        "bradlc.vscode-tailwindcss",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "ms-vscode.vscode-json",
+        "ms-vscode-remote.remote-containers",
+        "github.copilot",
+        "github.copilot-chat",
+        "prisma.prisma",
+        "christian-kohler.path-intellisense",
+        "formulahendry.auto-rename-tag",
+        "usernamehw.errorlens",
+        "gruntfuggly.todo-tree",
+        "wayou.vscode-todo-highlight",
+        "aaron-bond.better-comments"
+      ]
+    }
+  },
+
+  "forwardPorts": [3000, 5432, 5555],
+  "portsAttributes": {
+    "3000": {
+      "label": "Next.js App",
+      "onAutoForward": "notify"
+    },
+    "5432": {
+      "label": "PostgreSQL Database"
+    },
+    "5555": {
+      "label": "Prisma Studio"
+    }
+  },
+
+  "remoteEnv": {
+    "DATABASE_URL": "${localEnv:DATABASE_URL:-postgresql://auth_user:auth_password@postgres:5432/auth_db}",
+    "NODE_ENV": "development",
+    "BETTER_AUTH_SECRET": "${localEnv:BETTER_AUTH_SECRET:-dev-secret-key-please-change-in-production}"
+  },
+
+  "postCreateCommand": "pnpm install && pnpm db:migrate && pnpm db:generate",
+
+  "remoteUser": "node"
+}
