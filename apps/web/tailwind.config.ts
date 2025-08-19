@@ -8,8 +8,6 @@ const config = {
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/**/*.{js,ts,jsx,tsx,mdx}',
-    // Include shared packages if needed
-    '../../packages/ui/**/*.{js,ts,jsx,tsx,mdx}',
   ],
 }
 

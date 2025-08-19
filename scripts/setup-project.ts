@@ -6,7 +6,7 @@
  * Usage: npx tsx scripts/setup-project.ts
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, cpSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import * as readline from 'readline';
 import { randomBytes } from 'crypto';
@@ -167,6 +167,14 @@ function updateProjectConfig(answers: ProjectAnswers) {
   // Update namespace
   config = config.replace(/namespace: "@boilerplate"/, `namespace: "${answers.namespace}"`);
 
+  // Update environment detection hardcoded domains
+  const productionDomain = answers.productionWebUrl.replace('https://', '');
+  const stagingDomainBase = answers.stagingWebUrl.replace('https://', '').split('.').slice(-2).join('.');
+  
+  config = config.replace(/hostname === "boilerplate\.lumineau\.app"/, `hostname === "${productionDomain}"`);
+  config = config.replace(/hostname\.includes\("-staging\.lumineau\.app"\)/, `hostname.includes("-staging.${stagingDomainBase}")`);
+  config = config.replace(/hostname\.includes\("-git-"\) \|\| hostname\.includes\("vercel\.app"\)/, `hostname.includes("-git-") || hostname.includes("vercel.app") || hostname.includes("${stagingDomainBase}")`);
+
   // Update development configuration - Single port
   config = config.replace(/port: 3000/, `port: ${answers.webPort}`);
   config = config.replace(/url: "http:\/\/localhost:3000"/, `url: "http://localhost:${answers.webPort}"`);
@@ -209,9 +217,32 @@ function updatePackageJson(answers: ProjectAnswers) {
     const webPackage = JSON.parse(readFileSync(webPackagePath, 'utf-8'));
     webPackage.name = `${answers.namespace}/web`;
     webPackage.description = `${answers.displayName} - Web Application`;
+    
+    // Update workspace dependencies with new namespace
+    if (webPackage.dependencies) {
+      if (webPackage.dependencies['@boilerplate/config']) {
+        webPackage.dependencies[`${answers.namespace}/config`] = webPackage.dependencies['@boilerplate/config'];
+        delete webPackage.dependencies['@boilerplate/config'];
+      }
+      if (webPackage.dependencies['@boilerplate/types']) {
+        webPackage.dependencies[`${answers.namespace}/types`] = webPackage.dependencies['@boilerplate/types'];
+        delete webPackage.dependencies['@boilerplate/types'];
+      }
+    }
+    
+    // Update build scripts with new namespace
+    if (webPackage.scripts) {
+      Object.keys(webPackage.scripts).forEach(scriptName => {
+        webPackage.scripts[scriptName] = webPackage.scripts[scriptName].replace(/@boilerplate\//g, `${answers.namespace}/`);
+      });
+    }
+    
     writeFileSync(webPackagePath, JSON.stringify(webPackage, null, 2));
     console.log('✅ Updated web app package.json');
   }
+
+  // Update shared packages
+  updateSharedPackagesJson(answers);
 }
 
 function updateDockerCompose(answers: ProjectAnswers) {
@@ -330,6 +361,108 @@ function updateMakefile(answers: ProjectAnswers) {
 
   writeFileSync(makefilePath, makefile);
   console.log('✅ Updated Makefile');
+}
+
+function updateSharedPackagesJson(answers: ProjectAnswers) {
+  // Update config package.json
+  const configPackagePath = join(process.cwd(), 'packages/config/package.json');
+  if (existsSync(configPackagePath)) {
+    const configPackage = JSON.parse(readFileSync(configPackagePath, 'utf-8'));
+    configPackage.name = `${answers.namespace}/config`;
+    writeFileSync(configPackagePath, JSON.stringify(configPackage, null, 2));
+    console.log('✅ Updated config package.json');
+  }
+  
+  // Update types package.json
+  const typesPackagePath = join(process.cwd(), 'packages/types/package.json');
+  if (existsSync(typesPackagePath)) {
+    const typesPackage = JSON.parse(readFileSync(typesPackagePath, 'utf-8'));
+    typesPackage.name = `${answers.namespace}/types`;
+    writeFileSync(typesPackagePath, JSON.stringify(typesPackage, null, 2));
+    console.log('✅ Updated types package.json');
+  }
+}
+
+function updateComponentImports(answers: ProjectAnswers) {
+  console.log('🔄 Updating component imports with new namespace...');
+  
+  // Dynamically find all TypeScript and TSX files that contain @boilerplate imports
+  const { execSync } = require('child_process');
+  
+  try {
+    // Use grep to find all files with @boilerplate imports
+    const grepResult = execSync('grep -r "@boilerplate" apps/web/app --include="*.ts" --include="*.tsx" -l', { 
+      encoding: 'utf-8',
+      cwd: process.cwd()
+    });
+    
+    const filesToUpdate = grepResult.trim().split('\n').filter(Boolean);
+    let updatedCount = 0;
+    
+    filesToUpdate.forEach((relativePath: string) => {
+      const filePath = join(process.cwd(), relativePath);
+      if (existsSync(filePath)) {
+        let content = readFileSync(filePath, 'utf-8');
+        const originalContent = content;
+        
+        // Update imports
+        content = content.replace(/@boilerplate\/config/g, `${answers.namespace}/config`);
+        content = content.replace(/@boilerplate\/types/g, `${answers.namespace}/types`);
+        
+        if (content !== originalContent) {
+          writeFileSync(filePath, content);
+          updatedCount++;
+          console.log(`  ✅ Updated ${relativePath}`);
+        }
+      }
+    });
+    
+    console.log(`✅ Updated imports in ${updatedCount} files`);
+    
+  } catch (error) {
+    // Fallback to predefined list if grep fails
+    console.log('⚠️  Grep search failed, using fallback file list...');
+    
+    const fallbackFiles = [
+      'apps/web/app/components/sidebar.tsx',
+      'apps/web/app/layout.tsx',
+      'apps/web/app/(web)/landing/page.tsx',
+      'apps/web/app/lib/queries/auth.ts',
+      'apps/web/app/components/settings/settings-panel.tsx',
+      'apps/web/app/lib/queries/notifications.ts',
+      'apps/web/app/lib/auth.ts',
+      'apps/web/app/lib/i18n.ts',
+      'apps/web/app/lib/auth-client.ts',
+      'apps/web/app/hooks/use-notifications.tsx',
+      'apps/web/app/debug/page.tsx',
+      'apps/web/app/lib/theme/index.ts',
+      'apps/web/app/api/route.ts',
+      'apps/web/app/api/health/route.ts',
+      'apps/web/app/(protected)/layout.tsx'
+    ];
+    
+    let updatedCount = 0;
+    
+    fallbackFiles.forEach((relativePath: string) => {
+      const filePath = join(process.cwd(), relativePath);
+      if (existsSync(filePath)) {
+        let content = readFileSync(filePath, 'utf-8');
+        const originalContent = content;
+        
+        // Update imports
+        content = content.replace(/@boilerplate\/config/g, `${answers.namespace}/config`);
+        content = content.replace(/@boilerplate\/types/g, `${answers.namespace}/types`);
+        
+        if (content !== originalContent) {
+          writeFileSync(filePath, content);
+          updatedCount++;
+          console.log(`  ✅ Updated ${relativePath}`);
+        }
+      }
+    });
+    
+    console.log(`✅ Updated imports in ${updatedCount} files (fallback mode)`);
+  }
 }
 
 function updateManifestJson(answers: ProjectAnswers) {
@@ -479,13 +612,48 @@ function validateSetup(answers: ProjectAnswers) {
     throw new Error('❌ Missing required environment variables in apps/web/.env.local.');
   }
   
+  // Check if project config has been updated
+  const configPath = join(process.cwd(), 'packages/config/project.config.ts');
+  if (existsSync(configPath)) {
+    const config = readFileSync(configPath, 'utf-8');
+    if (config.includes(`namespace: "${answers.namespace}"`) && config.includes(answers.productionWebUrl)) {
+      console.log('✅ Project config successfully updated');
+    } else {
+      throw new Error('❌ Project config may not have been updated correctly.');
+    }
+  }
+  
+  // Check if component imports have been updated
+  const sampleComponentPath = join(process.cwd(), 'apps/web/app/components/sidebar.tsx');
+  if (existsSync(sampleComponentPath)) {
+    const sampleComponent = readFileSync(sampleComponentPath, 'utf-8');
+    if (sampleComponent.includes(`${answers.namespace}/config`)) {
+      console.log('✅ Component imports successfully updated');
+    } else {
+      throw new Error('❌ Component imports may not have been updated correctly.');
+    }
+  }
+  
+  // Check if package.json has been updated
+  const webPackagePath = join(process.cwd(), 'apps/web/package.json');
+  if (existsSync(webPackagePath)) {
+    const webPackage = JSON.parse(readFileSync(webPackagePath, 'utf-8'));
+    if (webPackage.name === `${answers.namespace}/web` && webPackage.dependencies[`${answers.namespace}/config`]) {
+      console.log('✅ Package dependencies successfully updated');
+    } else {
+      throw new Error('❌ Package dependencies may not have been updated correctly.');
+    }
+  }
+  
   // Check if docker-compose.yml has been updated
   const dockerComposePath = join(process.cwd(), 'docker-compose.yml');
   if (existsSync(dockerComposePath)) {
     const dockerCompose = readFileSync(dockerComposePath, 'utf-8');
     
-    if (dockerCompose.includes('auth_user') || dockerCompose.includes('auth_db')) {
-      console.log('⚠️  Warning: docker-compose.yml still contains default values. This is normal for the template.');
+    if (dockerCompose.includes(answers.dbUser) && dockerCompose.includes(answers.dbName)) {
+      console.log('✅ Docker Compose successfully updated');
+    } else {
+      console.log('⚠️  Warning: docker-compose.yml may not have been updated properly.');
     }
   }
   
@@ -494,8 +662,10 @@ function validateSetup(answers: ProjectAnswers) {
   if (existsSync(makefilePath)) {
     const makefile = readFileSync(makefilePath, 'utf-8');
     
-    if (makefile.includes('auth_user:auth_password@localhost:5432/auth_db')) {
-      throw new Error('❌ Makefile still contains hardcoded database credentials. Setup may be incomplete.');
+    if (makefile.includes(`${answers.namespace}/web`)) {
+      console.log('✅ Makefile successfully updated');
+    } else {
+      console.log('⚠️  Warning: Makefile may not have been updated properly.');
     }
   }
   
@@ -510,6 +680,7 @@ async function main() {
     
     updateProjectConfig(answers);
     updatePackageJson(answers);
+    updateComponentImports(answers);
     updateDockerCompose(answers);
     createEnvironmentFiles(answers);
     updateMakefile(answers);
