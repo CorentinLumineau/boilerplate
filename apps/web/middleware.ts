@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import { headers } from 'next/headers'
+import { getSessionCookie } from 'better-auth/cookies'
 
 export async function middleware(request: NextRequest) {
   // Single domain architecture - no CORS handling needed
@@ -13,7 +12,7 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  // API route authentication
+  // API route authentication - optimistic cookie check only
   if (pathname.startsWith('/api')) {
     // Skip authentication for public endpoints
     const publicEndpoints = ['/api/auth', '/api/health']
@@ -22,24 +21,18 @@ export async function middleware(request: NextRequest) {
     )
     
     if (!isPublicEndpoint) {
-      try {
-        const session = await auth.api.getSession({
-          headers: await headers()
-        })
-
-        if (!session) {
-          return NextResponse.json(
-            { error: 'Unauthorized' },
-            { status: 401 }
-          )
-        }
-      } catch (error) {
-        console.error('Middleware auth error:', error)
+      // Optimistic check using cookie only (fast, no DB calls)
+      const sessionCookie = getSessionCookie(request)
+      
+      if (!sessionCookie) {
         return NextResponse.json(
-          { error: 'Authentication failed' },
+          { error: 'Unauthorized' },
           { status: 401 }
         )
       }
+      
+      // Note: This is optimistic authentication only
+      // Full session verification still happens in individual API routes
     }
   }
 
