@@ -1,17 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { signIn } from "@/lib/auth-client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, AlertCircle } from "lucide-react";
+import { signIn } from "@/lib/auth-client";
+import { AlertCircle, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -22,15 +22,15 @@ export function LoginForm() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await signIn.email({
-        email,
+      const { data, error } = await signIn.username({
+        username,
         password,
         callbackURL: "/",
       });
 
 
       if (error) {
-        setError(error.message || "Invalid email or password");
+        setError(error.message || "Invalid username or password");
       } else if (data) {
         // For cross-domain setups, we need to reload the page to ensure
         // the useSession hook detects the new session cookies
@@ -56,15 +56,14 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4 w-full">
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="username">Username</Label>
         <Input
-          id="email"
-          type="email"
-          placeholder="you@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          id="username"
+          placeholder="jdoe"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
           disabled={isLoading}
-          autoComplete="email"
+          autoComplete="username"
           required
         />
       </div>

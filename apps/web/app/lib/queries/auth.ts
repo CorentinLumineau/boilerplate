@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { AuthSession, LoginCredentials, SignupCredentials } from '@boilerplate/types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 // Query Keys
 export const authQueryKeys = {
@@ -80,6 +80,7 @@ export function useSignup() {
         body: JSON.stringify({
           email: credentials.email,
           password: credentials.password,
+          username: credentials.username,
           name: credentials.name,
         }),
       })

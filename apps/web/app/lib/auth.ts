@@ -1,11 +1,12 @@
-import { betterAuth } from "better-auth";
-import { nextCookies } from "better-auth/next-js";
-import { prismaAdapter } from "better-auth/adapters/prisma";
-import { prisma } from "./prisma";
 import { getWebUrl } from "@boilerplate/config/project.config";
+import { betterAuth } from "better-auth";
+import { prismaAdapter } from "better-auth/adapters/prisma";
+import { nextCookies } from "better-auth/next-js";
+import { username } from "better-auth/plugins";
+import { prisma } from "./prisma";
 
 // Determine if we're in production (simplified for single domain)
-const isProduction = process.env.NODE_ENV === 'production' || 
+const isProduction = process.env.NODE_ENV === 'production' ||
                     process.env.VERCEL_ENV === 'production';
 
 // Get web app URL from project config (dynamic environment detection)
@@ -19,14 +20,14 @@ const getRootDomain = (url: string) => {
     if (hostname === 'localhost' || hostname.includes('127.0.0.1')) {
       return undefined;
     }
-    
+
     // For production domains, extract the root domain
     const parts = hostname.split('.');
     if (parts.length >= 2) {
       // Return the root domain without the leading dot (better-auth handles this)
       return parts.slice(-2).join('.');
     }
-    
+
     return undefined;
   } catch {
     return undefined;
@@ -77,7 +78,10 @@ export const auth = betterAuth({
     }
   },
   // Add the nextCookies plugin - MUST be last in the plugins array
-  plugins: [nextCookies()],
+  plugins: [nextCookies(), username({
+    minUsernameLength: 3,
+    maxUsernameLength: 20,
+  })],
 });
 
 export type Auth = typeof auth;

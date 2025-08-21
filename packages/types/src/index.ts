@@ -88,7 +88,8 @@ export interface LoginCredentials {
 
 export interface SignupCredentials {
   email: string
-  password: string  
+  password: string
+  username: string
   name?: string
 }
 

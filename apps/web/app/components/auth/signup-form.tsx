@@ -1,17 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { signUp } from "@/lib/auth-client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, AlertCircle } from "lucide-react";
+import { authClient, signUp } from "@/lib/auth-client";
+import { AlertCircle, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export function SignupForm() {
   const router = useRouter();
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -21,6 +22,11 @@ export function SignupForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (!((await authClient.isUsernameAvailable({username: username.toLowerCase()})).data?.available)) {
+      setError("Username is already taken");
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match");
@@ -39,6 +45,7 @@ export function SignupForm() {
         email,
         password,
         name,
+        username,
         callbackURL: "/",
       });
 
@@ -66,6 +73,19 @@ export function SignupForm() {
           onChange={(e) => setName(e.target.value)}
           disabled={isLoading}
           autoComplete="name"
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="username">Username</Label>
+        <Input
+          id="username"
+          type="text"
+          placeholder="johndoe"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          disabled={isLoading}
+          autoComplete="username"
           required
         />
       </div>
