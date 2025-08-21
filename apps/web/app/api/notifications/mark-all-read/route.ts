@@ -5,10 +5,11 @@ import { prisma } from '@/lib/prisma'
 
 export async function PATCH(request: NextRequest) {
   try {
+    // Session is guaranteed by middleware
     const session = await auth.api.getSession({ headers: await headers() })
     
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      throw new Error('Session not found after middleware authentication')
     }
 
     // Mark all unread notifications as read

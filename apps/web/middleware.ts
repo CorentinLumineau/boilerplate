@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
+import { headers } from 'next/headers'
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   // Single domain architecture - no CORS handling needed
   // All requests are same-origin, which simplifies authentication and security
   
@@ -9,17 +11,41 @@ export function middleware(request: NextRequest) {
     return new Response(null, { status: 200 })
   }
 
-  // Handle root path redirects
   const { pathname } = request.nextUrl
 
-  // If someone tries to access the old dashboard path, redirect to root
-  if (pathname === '/dashboard') {
-    return NextResponse.redirect(new URL('/', request.url))
+  // API route authentication
+  if (pathname.startsWith('/api')) {
+    // Skip authentication for public endpoints
+    const publicEndpoints = ['/api/auth', '/api/health']
+    const isPublicEndpoint = publicEndpoints.some(endpoint => 
+      pathname.startsWith(endpoint)
+    )
+    
+    if (!isPublicEndpoint) {
+      try {
+        const session = await auth.api.getSession({
+          headers: await headers()
+        })
+
+        if (!session) {
+          return NextResponse.json(
+            { error: 'Unauthorized' },
+            { status: 401 }
+          )
+        }
+      } catch (error) {
+        console.error('Middleware auth error:', error)
+        return NextResponse.json(
+          { error: 'Authentication failed' },
+          { status: 401 }
+        )
+      }
+    }
   }
 
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/api/:path*', '/((?!_next/static|_next/image|favicon.ico).*)'],
 }

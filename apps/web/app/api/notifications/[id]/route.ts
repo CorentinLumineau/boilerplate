@@ -8,10 +8,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Session is guaranteed by middleware
     const session = await auth.api.getSession({ headers: await headers() })
     
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      throw new Error('Session not found after middleware authentication')
     }
 
     const { status } = await request.json()
@@ -73,10 +74,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Session is guaranteed by middleware
     const session = await auth.api.getSession({ headers: await headers() })
     
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      throw new Error('Session not found after middleware authentication')
     }
 
     const { id } = await params

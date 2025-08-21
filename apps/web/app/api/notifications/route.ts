@@ -5,10 +5,11 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
+    // Session is guaranteed by middleware
     const session = await auth.api.getSession({ headers: await headers() })
     
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      throw new Error('Session not found after middleware authentication')
     }
 
     const { searchParams } = new URL(request.url)
@@ -65,10 +66,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Session is guaranteed by middleware
     const session = await auth.api.getSession({ headers: await headers() })
     
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      throw new Error('Session not found after middleware authentication')
     }
 
     const body = await request.json()
