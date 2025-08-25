@@ -10,6 +10,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, cpSync } from 'fs';
 import { join } from 'path';
 import * as readline from 'readline';
 import { randomBytes } from 'crypto';
+import { readdirSync } from 'fs';
 
 interface ProjectAnswers {
   name: string;
@@ -209,8 +210,39 @@ function updatePackageJson(answers: ProjectAnswers) {
     const webPackage = JSON.parse(readFileSync(webPackagePath, 'utf-8'));
     webPackage.name = `${answers.namespace}/web`;
     webPackage.description = `${answers.displayName} - Web Application`;
+    
+    // Update build scripts to use new namespace
+    webPackage.scripts.build = webPackage.scripts.build.replace(/@boilerplate\/types/g, `${answers.namespace}/types`);
+    webPackage.scripts.build = webPackage.scripts.build.replace(/@boilerplate\/config/g, `${answers.namespace}/config`);
+    webPackage.scripts["build:production"] = webPackage.scripts["build:production"].replace(/@boilerplate\/types/g, `${answers.namespace}/types`);
+    webPackage.scripts["build:production"] = webPackage.scripts["build:production"].replace(/@boilerplate\/config/g, `${answers.namespace}/config`);
+    
+    // Update dependencies
+    webPackage.dependencies[`${answers.namespace}/config`] = webPackage.dependencies["@boilerplate/config"];
+    webPackage.dependencies[`${answers.namespace}/types`] = webPackage.dependencies["@boilerplate/types"];
+    delete webPackage.dependencies["@boilerplate/config"];
+    delete webPackage.dependencies["@boilerplate/types"];
+    
     writeFileSync(webPackagePath, JSON.stringify(webPackage, null, 2));
     console.log('✅ Updated web app package.json');
+  }
+
+  // Update types package.json
+  const typesPackagePath = join(process.cwd(), 'packages/types/package.json');
+  if (existsSync(typesPackagePath)) {
+    const typesPackage = JSON.parse(readFileSync(typesPackagePath, 'utf-8'));
+    typesPackage.name = `${answers.namespace}/types`;
+    writeFileSync(typesPackagePath, JSON.stringify(typesPackage, null, 2));
+    console.log('✅ Updated types package.json');
+  }
+
+  // Update config package.json
+  const configPackagePath = join(process.cwd(), 'packages/config/package.json');
+  if (existsSync(configPackagePath)) {
+    const configPackage = JSON.parse(readFileSync(configPackagePath, 'utf-8'));
+    configPackage.name = `${answers.namespace}/config`;
+    writeFileSync(configPackagePath, JSON.stringify(configPackage, null, 2));
+    console.log('✅ Updated config package.json');
   }
 }
 
@@ -224,21 +256,16 @@ function updateDockerCompose(answers: ProjectAnswers) {
   
   let dockerCompose = readFileSync(dockerComposePath, 'utf-8');
 
-  // Update container name
+  // Update container name - handle both direct and environment variable cases
+  dockerCompose = dockerCompose.replace(/container_name: \${PROJECT_NAME:-[^}]+}-postgres/, `container_name: \${PROJECT_NAME:-${answers.name}}-postgres`);
   dockerCompose = dockerCompose.replace(/container_name: boilerplate-postgres/, `container_name: ${answers.name}-postgres`);
   
-  // Update database configuration
-  dockerCompose = dockerCompose.replace(/POSTGRES_USER: auth_user/, `POSTGRES_USER: ${answers.dbUser}`);
-  dockerCompose = dockerCompose.replace(/POSTGRES_PASSWORD: auth_password/, `POSTGRES_PASSWORD: ${answers.dbPassword}`);
-  dockerCompose = dockerCompose.replace(/POSTGRES_DB: auth_db/, `POSTGRES_DB: ${answers.dbName}`);
-  
-  // Update health check
-  dockerCompose = dockerCompose.replace(/pg_isready -U auth_user -d auth_db/, `pg_isready -U ${answers.dbUser} -d ${answers.dbName}`);
-  
-  // Update volume name
+  // Update volume name - handle both direct and environment variable cases
+  dockerCompose = dockerCompose.replace(/name: \${PROJECT_NAME:-[^}]+}-postgres-data/, `name: \${PROJECT_NAME:-${answers.name}}-postgres-data`);
   dockerCompose = dockerCompose.replace(/name: boilerplate-postgres-data/, `name: ${answers.name}-postgres-data`);
   
-  // Update network name
+  // Update network name - handle both direct and environment variable cases
+  dockerCompose = dockerCompose.replace(/name: \${PROJECT_NAME:-[^}]+}-network/g, `name: \${PROJECT_NAME:-${answers.name}}-network`);
   dockerCompose = dockerCompose.replace(/name: boilerplate-network/g, `name: ${answers.name}-network`);
   dockerCompose = dockerCompose.replace(/- boilerplate-network/, `- ${answers.name}-network`);
   dockerCompose = dockerCompose.replace(/boilerplate-network:/, `${answers.name}-network:`);
@@ -248,8 +275,8 @@ function updateDockerCompose(answers: ProjectAnswers) {
 }
 
 function createEnvironmentFiles(answers: ProjectAnswers) {
-  // Create web app .env.local file (for local development)
-  const webEnvPath = join(process.cwd(), 'apps/web/.env.local');
+  // Create web app .env file (for local development) - FIXED: should be .env not .env.local
+  const webEnvPath = join(process.cwd(), 'apps/web/.env');
   const databaseUrl = `postgresql://${answers.dbUser}:${answers.dbPassword}@localhost:5432/${answers.dbName}`;
   
   const webEnvContent = `# Local Development Environment Variables
@@ -268,9 +295,9 @@ BETTER_AUTH_SECRET="${answers.authSecret}"
 `;
 
   writeFileSync(webEnvPath, webEnvContent);
-  console.log('✅ Created apps/web/.env.local');
+  console.log('✅ Created apps/web/.env');
 
-  // Create .env.project file for Docker Compose
+  // Create/Update .env.project file for Docker Compose
   const projectEnvPath = join(process.cwd(), '.env.project');
   const projectEnvContent = `# Docker Compose Configuration Variables
 # This file is generated by scripts/setup-project.ts
@@ -284,13 +311,13 @@ DB_PORT=5432
 `;
 
   writeFileSync(projectEnvPath, projectEnvContent);
-  console.log('✅ Created .env.project for Docker Compose');
+  console.log('✅ Created/Updated .env.project for Docker Compose');
 
   // Update .env.example files
   const webEnvExamplePath = join(process.cwd(), 'apps/web/.env.example');
   if (existsSync(webEnvExamplePath)) {
     const exampleContent = `# Local Development Environment Variables
-# Copy this file to .env.local and customize for your setup
+# Copy this file to .env and customize for your setup
 
 # Database Configuration (Required)
 DATABASE_URL="postgresql://${answers.dbUser}:${answers.dbPassword}@localhost:5432/${answers.dbName}"
@@ -325,8 +352,8 @@ function updateMakefile(answers: ProjectAnswers) {
   // Update title comment
   makefile = makefile.replace(/# V0 Boilerplate Makefile/, `# ${answers.displayName} Makefile`);
 
-  // Update package filter references - Replace all @boilerplate/web references
-  makefile = makefile.replace(/@boilerplate\/web/g, `${answers.namespace}/web`);
+  // Update package filter references - Replace all @boilerplate references
+  makefile = makefile.replace(/@boilerplate\/([a-zA-Z0-9_-]+)/g, `${answers.namespace}/$1`);
 
   writeFileSync(makefilePath, makefile);
   console.log('✅ Updated Makefile');
@@ -423,6 +450,413 @@ function updateVercelDeploymentGuide(answers: ProjectAnswers) {
   console.log('✅ Updated docs/vercel-deployment.md with project configuration');
 }
 
+// NEW FUNCTION: Comprehensive import replacement throughout the codebase
+function replaceBoilerplateImports(answers: ProjectAnswers) {
+  console.log('🔄 Replacing @boilerplate imports throughout the codebase...');
+  
+  // Recursively find all files in the project
+  function findFiles(dir: string, extensions: string[] = []): string[] {
+    const files: string[] = [];
+    
+    try {
+      const items = readdirSync(dir, { withFileTypes: true });
+      
+      for (const item of items) {
+        const fullPath = join(dir, item.name);
+        
+        // Skip node_modules, .git, and other common directories
+        if (item.isDirectory()) {
+          if (['node_modules', '.git', '.turbo', 'dist', 'build', 'coverage'].includes(item.name)) {
+            continue;
+          }
+          files.push(...findFiles(fullPath, extensions));
+        } else if (item.isFile()) {
+          // If extensions specified, only include matching files
+          if (extensions.length === 0 || extensions.some(ext => item.name.endsWith(ext))) {
+            files.push(fullPath);
+          }
+        }
+      }
+    } catch (error) {
+      // Skip directories we can't read
+      console.log(`⚠️  Skipping directory ${dir}: ${error}`);
+    }
+    
+    return files;
+  }
+  
+  // Get all files in the project
+  const projectRoot = process.cwd();
+  const allFiles = findFiles(projectRoot);
+  
+  // File extensions to process (text files that might contain @boilerplate references)
+  const textExtensions = [
+    '.ts', '.tsx', '.js', '.jsx', '.mjs', '.json', '.md', '.yml', '.yaml', 
+    '.txt', '.cfg', '.conf', '.rc', '.config', '.env.example', '.env', '.git',
+    '.html', '.css', '.scss', '.sql', '.sh', '.bat', '.ps1', '.xml', '.toml',
+    '.prettierrc'
+  ];
+  
+  // Filter to only text files and exclude the setup script itself
+  const setupScriptPath = join(projectRoot, 'scripts/setup-project.ts');
+  const textFiles = allFiles.filter(file => {
+    const ext = file.split('.').pop()?.toLowerCase();
+    return ext && textExtensions.includes(`.${ext}`) && file !== setupScriptPath;
+  });
+  
+  console.log(`📁 Found ${textFiles.length} text files to process...`);
+  
+  let totalReplacements = 0;
+  let filesUpdated = 0;
+  
+  for (const filePath of textFiles) {
+    try {
+      let content = readFileSync(filePath, 'utf-8');
+      let fileReplacements = 0;
+      
+      // Replace all @boilerplate patterns with the new namespace
+      // This regex finds @boilerplate/ followed by any word characters
+      const boilerplateRegex = /@boilerplate\/([a-zA-Z0-9_-]+)/g;
+      
+      // Additional comprehensive patterns for boilerplate text (case-insensitive)
+      const boilerplateTextPatterns = [
+        { pattern: /boilerplate/gi, replacement: answers.name },
+        { pattern: /Boilerplate/g, replacement: answers.displayName.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') },
+        { pattern: /https:\/\/boilerplate\.lumineau\.app/g, replacement: answers.productionWebUrl },
+        { pattern: /https:\/\/boilerplate-staging\.lumineau\.app/g, replacement: answers.stagingWebUrl },
+        { pattern: /boilerplate-postgres/g, replacement: `${answers.name}-postgres` },
+        { pattern: /boilerplate-network/g, replacement: `${answers.name}-network` },
+        { pattern: /boilerplate-postgres-data/g, replacement: `${answers.name}-postgres-data` },
+        { pattern: /\/workspaces\/boilerplate/g, replacement: `/workspaces/${answers.name}` },
+        { pattern: /"boilerplate"/g, replacement: `"${answers.name}"` },
+        { pattern: /boilerplate-/g, replacement: `${answers.name}-` }
+      ];
+      
+      let currentContent = content.replace(boilerplateRegex, (match, packageName) => {
+        fileReplacements++;
+        return `${answers.namespace}/${packageName}`;
+      });
+      
+      // Apply additional boilerplate text replacements
+      for (const { pattern, replacement } of boilerplateTextPatterns) {
+        // Be more careful about what we're replacing
+        const matches = currentContent.match(pattern);
+        if (matches) {
+          // For case-insensitive replacements, be extra careful
+          if (pattern.flags.includes('i')) {
+            // Skip replacement if it would affect the actual project name
+            const safeMatches = matches.filter(match => {
+              const lowerMatch = match.toLowerCase();
+              const lowerProjectName = answers.name.toLowerCase();
+              return !lowerMatch.includes(lowerProjectName) && !lowerProjectName.includes(lowerMatch);
+            });
+            
+            if (safeMatches.length > 0) {
+              currentContent = currentContent.replace(pattern, replacement);
+              fileReplacements += safeMatches.length;
+            }
+          } else {
+            currentContent = currentContent.replace(pattern, replacement);
+            fileReplacements += matches.length;
+          }
+        }
+      }
+      
+      if (currentContent !== content) {
+        writeFileSync(filePath, currentContent);
+        totalReplacements += fileReplacements;
+        filesUpdated++;
+        
+        // Show relative path for better readability
+        const relativePath = filePath.replace(projectRoot, '').replace(/^\//, '');
+        console.log(`✅ Updated ${relativePath} (${fileReplacements} replacements)`);
+      }
+    } catch (error) {
+      // Skip files we can't read or write (binary files, etc.)
+      const relativePath = filePath.replace(projectRoot, '').replace(/^\//, '');
+      console.log(`⚠️  Skipping ${relativePath}: ${error}`);
+    }
+  }
+  
+  console.log(`✅ Import replacement complete!`);
+  console.log(`   - Files updated: ${filesUpdated}`);
+  console.log(`   - Total replacements: ${totalReplacements}`);
+  
+  // Additional validation: check if any @boilerplate references remain
+  console.log('\n🔍 Validating that all @boilerplate references were replaced...');
+  let remainingReferences = 0;
+  
+  for (const filePath of textFiles) {
+    try {
+      // Skip the setup script itself during validation (already filtered out, but double-check)
+      const currentSetupScriptPath = join(projectRoot, 'scripts/setup-project.ts');
+      if (filePath === currentSetupScriptPath) {
+        continue;
+      }
+      
+      const content = readFileSync(filePath, 'utf-8');
+      const boilerplateMatches = content.match(/@boilerplate\//g);
+      const textMatches = content.match(/boilerplate/gi);
+      
+      if (boilerplateMatches) {
+        remainingReferences += boilerplateMatches.length;
+        const relativePath = filePath.replace(projectRoot, '').replace(/^\//, '');
+        console.log(`⚠️  Found ${boilerplateMatches.length} remaining @boilerplate references in ${relativePath}`);
+      }
+      
+      if (textMatches) {
+        // Filter out legitimate project name references and common words
+        const filteredMatches = textMatches.filter((match: string) => {
+          const lowerMatch = match.toLowerCase();
+          const lowerProjectName = answers.name.toLowerCase();
+          
+          // Skip if it's the actual project name or part of it
+          if (lowerMatch.includes(lowerProjectName) || lowerProjectName.includes(lowerMatch)) {
+            return false;
+          }
+          
+          // Skip common words that might contain "boiler" or "plate"
+          const commonWords = ['boiler', 'plate', 'plated', 'plating'];
+          if (commonWords.some(word => lowerMatch === word)) {
+            return false;
+          }
+          
+          // Skip if this is a special file that we handle separately
+          const specialFiles = [
+            '.devcontainer/devcontainer.json',
+            '.devcontainer/docker-compose.dev.yml',
+            'CLAUDE.md',
+            'README.md',
+            'Makefile',
+            '.prettierrc'
+          ];
+          const relativePath = filePath.replace(projectRoot, '').replace(/^\//, '');
+          if (specialFiles.some(file => relativePath.includes(file))) {
+            return false;
+          }
+          
+          return true;
+        });
+        
+        if (filteredMatches.length > 0) {
+          remainingReferences += filteredMatches.length;
+          const relativePath = filePath.replace(projectRoot, '').replace(/^\//, '');
+          if (!boilerplateMatches) { // Don't duplicate the message
+            console.log(`⚠️  Found ${filteredMatches.length} remaining boilerplate text references in ${relativePath}`);
+          }
+        }
+      }
+    } catch (error) {
+      // Skip files we can't read
+    }
+  }
+  
+  if (remainingReferences === 0) {
+    console.log('✅ All @boilerplate references successfully replaced!');
+  } else {
+    console.log(`⚠️  Found ${remainingReferences} remaining boilerplate references. You may need to manually review these files.`);
+  }
+}
+
+// Function to handle special files with specific boilerplate references
+function handleSpecialFiles(answers: ProjectAnswers) {
+  const projectRoot = process.cwd();
+  let specialReplacements = 0;
+  
+  // Handle devcontainer.json
+  const devcontainerPath = join(projectRoot, '.devcontainer/devcontainer.json');
+  if (existsSync(devcontainerPath)) {
+    try {
+      let content = readFileSync(devcontainerPath, 'utf-8');
+      let replacements = 0;
+      
+      // Replace "Boilerplate Development" with project display name
+      if (content.includes('"Boilerplate Development"')) {
+        content = content.replace('"Boilerplate Development"', `"${answers.displayName} Development"`);
+        replacements++;
+      }
+      
+      // Replace "/workspaces/boilerplate" with "/workspaces/{project-name}"
+      const workspacePattern = /\/workspaces\/boilerplate/g;
+      const workspaceMatches = content.match(workspacePattern);
+      if (workspaceMatches) {
+        content = content.replace(workspacePattern, `/workspaces/${answers.name}`);
+        replacements += workspaceMatches.length;
+      }
+      
+      if (replacements > 0) {
+        writeFileSync(devcontainerPath, content);
+        specialReplacements += replacements;
+        console.log(`✅ Updated .devcontainer/devcontainer.json (${replacements} replacements)`);
+      }
+    } catch (error) {
+      console.log(`⚠️  Error updating .devcontainer/devcontainer.json: ${error}`);
+    }
+  }
+  
+  // Handle docker-compose.dev.yml
+  const dockerDevPath = join(projectRoot, '.devcontainer/docker-compose.dev.yml');
+  if (existsSync(dockerDevPath)) {
+    try {
+      let content = readFileSync(dockerDevPath, 'utf-8');
+      let replacements = 0;
+      
+      // Replace "/workspaces/boilerplate" paths
+      const workspacePaths = [
+        `/workspaces/boilerplate/node_modules`,
+        `/workspaces/boilerplate/apps/web/node_modules`,
+        `/workspaces/boilerplate`
+      ];
+      
+      for (const oldPath of workspacePaths) {
+        const newPath = oldPath.replace('/boilerplate', `/${answers.name}`);
+        const matches = content.match(new RegExp(oldPath.replace(/\//g, '\\/'), 'g'));
+        if (matches) {
+          content = content.replace(new RegExp(oldPath.replace(/\//g, '\\/'), 'g'), newPath);
+          replacements += matches.length;
+        }
+      }
+      
+      if (replacements > 0) {
+        writeFileSync(dockerDevPath, content);
+        specialReplacements += replacements;
+        console.log(`✅ Updated .devcontainer/docker-compose.dev.yml (${replacements} replacements)`);
+      }
+    } catch (error) {
+      console.log(`⚠️  Error updating .devcontainer/docker-compose.dev.yml: ${error}`);
+    }
+  }
+  
+  // Handle CLAUDE.md
+  const claudeMdPath = join(projectRoot, 'CLAUDE.md');
+  if (existsSync(claudeMdPath)) {
+    try {
+      let content = readFileSync(claudeMdPath, 'utf-8');
+      let replacements = 0;
+      
+      // Replace "This boilerplate supports automatic multi-environment deployment:" with project-specific text
+      const boilerplateText = "This boilerplate supports automatic multi-environment deployment:";
+      const projectText = `This project supports automatic multi-environment deployment:`;
+      
+      if (content.includes(boilerplateText)) {
+        content = content.replace(boilerplateText, projectText);
+        replacements++;
+        console.log(`✅ Updated CLAUDE.md (1 replacement)`);
+      }
+      
+      // Replace other boilerplate references in CLAUDE.md
+      const boilerplateText2 = "V0 Boilerplate";
+      const projectText2 = answers.displayName;
+      
+      if (content.includes(boilerplateText2)) {
+        content = content.replace(boilerplateText2, projectText2);
+        replacements++;
+      }
+      
+      if (replacements > 0) {
+        writeFileSync(claudeMdPath, content);
+        specialReplacements += replacements;
+        console.log(`✅ Updated CLAUDE.md (${replacements} replacements)`);
+      }
+    } catch (error) {
+      console.log(`⚠️  Error updating CLAUDE.md: ${error}`);
+    }
+  }
+  
+  // Handle README.md
+  const readmePath = join(projectRoot, 'README.md');
+  if (existsSync(readmePath)) {
+    try {
+      let content = readFileSync(readmePath, 'utf-8');
+      let replacements = 0;
+      
+      // Replace boilerplate title
+      const titlePattern = /# Boilerplate/g;
+      if (content.includes('# Boilerplate')) {
+        content = content.replace(titlePattern, `# ${answers.displayName}`);
+        replacements++;
+      }
+      
+      // Replace boilerplate directory reference
+      const dirPattern = /boilerplate\//g;
+      const dirMatches = content.match(dirPattern);
+      if (dirMatches) {
+        content = content.replace(dirPattern, `${answers.name}/`);
+        replacements += dirMatches.length;
+      }
+      
+      // Replace boilerplate text occurrences
+      const boilerplateTextPattern = /This boilerplate/gi;
+      const projectText = `This ${answers.displayName}`;
+      const boilerplateTextMatches = content.match(boilerplateTextPattern);
+      if (boilerplateTextMatches) {
+        content = content.replace(boilerplateTextPattern, projectText);
+        replacements += boilerplateTextMatches.length;
+      }
+      
+      if (replacements > 0) {
+        writeFileSync(readmePath, content);
+        specialReplacements += replacements;
+        console.log(`✅ Updated README.md (${replacements} replacements)`);
+      }
+    } catch (error) {
+      console.log(`⚠️  Error updating README.md: ${error}`);
+    }
+  }
+  
+  // Handle Makefile
+  const makefilePath = join(projectRoot, 'Makefile');
+  if (existsSync(makefilePath)) {
+    try {
+      let content = readFileSync(makefilePath, 'utf-8');
+      let replacements = 0;
+      
+      // Update PROJECT_NAME default value
+      const projectNamePattern = /PROJECT_NAME \?= boilerplate/g;
+      if (content.includes('PROJECT_NAME ?= boilerplate')) {
+        content = content.replace(projectNamePattern, `PROJECT_NAME ?= ${answers.name}`);
+        replacements++;
+      }
+      
+      if (replacements > 0) {
+        writeFileSync(makefilePath, content);
+        specialReplacements += replacements;
+        console.log(`✅ Updated Makefile (${replacements} replacements)`);
+      }
+    } catch (error) {
+      console.log(`⚠️  Error updating Makefile: ${error}`);
+    }
+  }
+  
+  // Handle .prettierrc
+  const prettierrcPath = join(projectRoot, '.prettierrc');
+  if (existsSync(prettierrcPath)) {
+    try {
+      let content = readFileSync(prettierrcPath, 'utf-8');
+      let replacements = 0;
+      
+      // Update @boilerplate/config reference
+      const configPattern = /@boilerplate\/config/g;
+      if (content.includes('@boilerplate/config')) {
+        content = content.replace(configPattern, `${answers.namespace}/config`);
+        replacements++;
+      }
+      
+      if (replacements > 0) {
+        writeFileSync(prettierrcPath, content);
+        specialReplacements += replacements;
+        console.log(`✅ Updated .prettierrc (${replacements} replacements)`);
+      }
+    } catch (error) {
+      console.log(`⚠️  Error updating .prettierrc: ${error}`);
+    }
+  }
+  
+  if (specialReplacements > 0) {
+    console.log(`✅ Special files handling complete (${specialReplacements} total replacements)`);
+  }
+}
+
 function displaySummary(answers: ProjectAnswers) {
   console.log('\n📋 PROJECT CONFIGURATION SUMMARY');
   console.log('==================================');
@@ -468,15 +902,15 @@ function validateSetup(answers: ProjectAnswers) {
     }
   }
   
-  // Check if web .env.local exists
-  const webEnvPath = join(process.cwd(), 'apps/web/.env.local');
+  // Check if web .env exists (FIXED: should be .env not .env.local)
+  const webEnvPath = join(process.cwd(), 'apps/web/.env');
   if (!existsSync(webEnvPath)) {
-    throw new Error('❌ apps/web/.env.local file not found. Setup may be incomplete.');
+    throw new Error('❌ apps/web/.env file not found. Setup may be incomplete.');
   }
   
   const webEnv = readFileSync(webEnvPath, 'utf-8');
   if (!webEnv.includes('DATABASE_URL=') || !webEnv.includes('BETTER_AUTH_SECRET=')) {
-    throw new Error('❌ Missing required environment variables in apps/web/.env.local.');
+    throw new Error('❌ Missing required environment variables in apps/web/.env.');
   }
   
   // Check if docker-compose.yml has been updated
@@ -484,8 +918,24 @@ function validateSetup(answers: ProjectAnswers) {
   if (existsSync(dockerComposePath)) {
     const dockerCompose = readFileSync(dockerComposePath, 'utf-8');
     
-    if (dockerCompose.includes('auth_user') || dockerCompose.includes('auth_db')) {
-      console.log('⚠️  Warning: docker-compose.yml still contains default values. This is normal for the template.');
+    // Check if it still contains obvious boilerplate references
+    if (dockerCompose.includes('boilerplate-postgres') || 
+        dockerCompose.includes('boilerplate-network') || 
+        dockerCompose.includes('boilerplate-postgres-data')) {
+      throw new Error('❌ docker-compose.yml still contains boilerplate references. Setup may be incomplete.');
+    }
+    
+    // Check if .env.project exists and has been updated
+    const envProjectPath = join(process.cwd(), '.env.project');
+    if (existsSync(envProjectPath)) {
+      const envProject = readFileSync(envProjectPath, 'utf-8');
+      if (envProject.includes('auth_user') || envProject.includes('auth_db') || envProject.includes('auth_password')) {
+        console.log('⚠️  Warning: .env.project still contains default values. This may cause database authentication issues.');
+        console.log('Current .env.project content:');
+        console.log(envProject);
+      }
+    } else {
+      console.log('⚠️  Warning: .env.project file not found. Database authentication may fail.');
     }
   }
   
@@ -499,7 +949,18 @@ function validateSetup(answers: ProjectAnswers) {
     }
   }
   
+  // Check if package names have been updated
+  const webPackagePath = join(process.cwd(), 'apps/web/package.json');
+  if (existsSync(webPackagePath)) {
+    const webPackage = readFileSync(webPackagePath, 'utf-8');
+    
+    if (webPackage.includes('@boilerplate')) {
+      throw new Error('❌ Web package.json still contains @boilerplate references. Setup may be incomplete.');
+    }
+  }
+  
   console.log('✅ Setup validation passed!');
+  console.log('💡 TIP: If you encounter database authentication errors, try running "make db-clean" first to remove old Docker volumes.');
 }
 
 async function main() {
@@ -516,6 +977,12 @@ async function main() {
     updateManifestJson(answers);
     updateSetupGuide(answers);
     updateVercelDeploymentGuide(answers);
+    
+    // NEW: Comprehensive import replacement
+    replaceBoilerplateImports(answers);
+    
+    // Handle special files with specific boilerplate references
+    handleSpecialFiles(answers);
     
     // Validate the setup
     validateSetup(answers);
@@ -540,6 +1007,11 @@ async function main() {
     console.log('- The generated BETTER_AUTH_SECRET is secure and unique');
     console.log('- Database credentials are automatically generated');
     console.log('- All sensitive files are in .gitignore');
+    console.log('');
+    console.log('🔧 IMPORTANT FIXES APPLIED:');
+    console.log('- Fixed .env file naming (.env instead of .env.local)');
+    console.log('- Comprehensive @boilerplate import replacement');
+    console.log('- Updated all package.json files with correct namespaces');
     
   } catch (error) {
     console.error('❌ Setup failed:', error);

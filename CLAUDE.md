@@ -36,6 +36,21 @@ This is a **Turborepo monorepo** with the following **single web app** structure
 
 - On troubleshooting issue, dont forget to get the latest documentation of technical stack by calling context7 mcp
 
+## Database Troubleshooting
+
+### Authentication Issues
+
+If you encounter database authentication errors like:
+Error: P1000: Authentication failed against database server
+
+This is typically caused by Docker volume persistence. When you copy the boilerplate and run setup multiple times, old Docker volumes may retain the default credentials.
+
+Solution:
+1. Run `make db-clean` to remove old containers, volumes, and networks
+2. Run `make db-up` to create fresh containers with correct credentials
+
+This forces Docker to create new volumes with your project's database credentials.
+
 ## Common Commands
 
 ### Root Level Commands (Turborepo)

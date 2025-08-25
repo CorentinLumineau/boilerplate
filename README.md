@@ -397,6 +397,25 @@ Visit `/debug` in any environment for comprehensive diagnostics:
 5. Update documentation
 6. Submit a pull request
 
+## ❓ Troubleshooting
+
+### Database Authentication Issues
+
+If you encounter database authentication errors like:
+```
+Error: P1000: Authentication failed against database server
+```
+
+This is typically caused by Docker volume persistence. When you copy the boilerplate and run setup multiple times, old Docker volumes may retain the default credentials.
+
+**Solution:**
+```bash
+make db-clean  # This removes containers, volumes, and networks
+make db-up     # This creates fresh containers with correct credentials
+```
+
+This forces Docker to create new volumes with your project's database credentials.
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
