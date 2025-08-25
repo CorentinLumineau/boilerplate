@@ -32,19 +32,7 @@ export function LoginForm() {
       if (error) {
         setError(error.message || "Invalid email or password");
       } else if (data) {
-        // For cross-domain setups, we need to reload the page to ensure
-        // the useSession hook detects the new session cookies
-        
-        // Option 1: Force page reload (most reliable for cross-domain)
-        if (typeof window !== 'undefined') {
-          window.location.href = "/";
-        }
-        
-        // Alternative option 2: Navigate with refresh (less reliable)
-        // await new Promise(resolve => setTimeout(resolve, 200));
-        // router.push("/");
-        // router.refresh();
-        // window.location.reload();
+        router.push("/");
       }
     } catch (err) {
       setError("An unexpected error occurred");
