@@ -12,9 +12,11 @@ export const auth = betterAuth({
   baseURL: getWebUrl(),
   emailAndPassword: {
     enabled: true,
+    requireEmailVerification: false, // Explicit for boilerplate
   },
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
+    updateAge: 60 * 60 * 24, // Add back for auto-refresh
   },
 });
 
