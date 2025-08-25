@@ -1,6 +1,5 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
 import "./globals.css"
 
 import { ThemeProvider } from "@/components/theme-provider"
@@ -12,8 +11,7 @@ import { InstallPrompt } from "@/components/pwa/install-prompt"
 import { OfflineIndicator } from "@/components/pwa/offline-indicator"
 import { NotificationProvider } from "@/hooks/use-notifications"
 import { QueryProvider } from "@/providers/query-provider"
-
-const inter = Inter({ subsets: ["latin"] })
+import { inter } from "@/lib/fonts/local-fonts"
 
 export const metadata: Metadata = {
   title: `${getDisplayName()} App`,
