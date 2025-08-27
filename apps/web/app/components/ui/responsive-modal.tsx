@@ -1,9 +1,9 @@
 "use client"
 
 import React, { useEffect, useState } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { BottomSheet } from '@/components/ui/bottom-sheet'
-import { cn } from '@/lib/utils'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@boilerplate/ui'
+import { BottomSheet } from '@boilerplate/ui'
+import { cn } from '@boilerplate/ui'
 
 interface ResponsiveModalProps {
   isOpen: boolean

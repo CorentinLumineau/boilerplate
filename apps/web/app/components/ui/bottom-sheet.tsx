@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Button } from '@boilerplate/ui';
+import { cn } from '@boilerplate/ui';
 
 interface BottomSheetProps {
   isOpen: boolean;

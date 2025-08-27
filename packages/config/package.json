@@ -27,5 +27,16 @@
     "tailwindcss": "^4.1.0",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.8.3"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.12",
+    "ts-jest": "^29.1.2",
+    "identity-obj-proxy": "^3.0.0"
+  },
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   }
 }

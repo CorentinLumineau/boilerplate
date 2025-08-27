@@ -43,7 +43,29 @@
       "outputs": []
     },
     "test": {
-      "outputs": ["coverage/**"]
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**", "test-results/**"],
+      "env": ["NODE_ENV", "DATABASE_URL", "BETTER_AUTH_SECRET"],
+      "cache": false
+    },
+    "test:watch": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**", "test-results/**"],
+      "env": ["NODE_ENV", "DATABASE_URL", "BETTER_AUTH_SECRET"],
+      "cache": false,
+      "persistent": true
+    },
+    "test:coverage": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**", "test-results/**"],
+      "env": ["NODE_ENV", "DATABASE_URL", "BETTER_AUTH_SECRET"],
+      "cache": false
+    },
+    "test:ci": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**", "test-results/**"],
+      "env": ["NODE_ENV", "DATABASE_URL", "BETTER_AUTH_SECRET"],
+      "cache": false
     },
     "clean": {
       "cache": false

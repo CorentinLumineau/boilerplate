@@ -1,0 +1,163 @@
+{
+  "projects": [
+    {
+      "displayName": "web-app",
+      "testMatch": ["<rootDir>/apps/web/**/*.{test,spec}.{js,jsx,ts,tsx}"],
+      "testEnvironment": "jsdom",
+      "setupFilesAfterEnv": ["<rootDir>/apps/web/jest.setup.js"],
+      "moduleNameMapping": {
+        "^@/(.*)$": "<rootDir>/apps/web/app/$1",
+        "^@/components/(.*)$": "<rootDir>/apps/web/app/components/$1",
+        "^@/lib/(.*)$": "<rootDir>/apps/web/app/lib/$1",
+        "^@/types/(.*)$": "<rootDir>/apps/web/app/types/$1"
+      },
+      "collectCoverageFrom": [
+        "<rootDir>/apps/web/app/**/*.{js,jsx,ts,tsx}",
+        "<rootDir>/apps/web/components/**/*.{js,jsx,ts,tsx}",
+        "<rootDir>/apps/web/lib/**/*.{js,jsx,ts,tsx}",
+        "!<rootDir>/apps/web/**/*.d.ts",
+        "!<rootDir>/apps/web/**/*.config.{js,ts}",
+        "!<rootDir>/apps/web/**/coverage/**",
+        "!<rootDir>/apps/web/**/node_modules/**",
+        "!<rootDir>/apps/web/**/.next/**",
+        "!<rootDir>/apps/web/**/dist/**"
+      ],
+      "coverageDirectory": "<rootDir>/apps/web/coverage",
+      "coverageReporters": ["text", "lcov", "html", "json"],
+      "coverageThreshold": {
+        "global": {
+          "branches": 80,
+          "functions": 80,
+          "lines": 80,
+          "statements": 80
+        }
+      }
+    },
+    {
+      "displayName": "ui-package",
+      "testMatch": ["<rootDir>/packages/ui/**/*.{test,spec}.{js,jsx,ts,tsx}"],
+      "testEnvironment": "jsdom",
+      "setupFilesAfterEnv": ["<rootDir>/packages/ui/jest.setup.js"],
+      "transform": {
+        "^.+\\.(ts|tsx)$": ["ts-jest", {
+          "tsconfig": "<rootDir>/packages/ui/tsconfig.json"
+        }]
+      },
+      "collectCoverageFrom": [
+        "<rootDir>/packages/ui/src/**/*.{ts,tsx}",
+        "!<rootDir>/packages/ui/**/*.d.ts",
+        "!<rootDir>/packages/ui/**/*.config.{ts,js}",
+        "!<rootDir>/packages/ui/**/coverage/**",
+        "!<rootDir>/packages/ui/**/node_modules/**",
+        "!<rootDir>/packages/ui/**/dist/**"
+      ],
+      "coverageDirectory": "<rootDir>/packages/ui/coverage",
+      "coverageReporters": ["text", "lcov", "html", "json"],
+      "coverageThreshold": {
+        "global": {
+          "branches": 80,
+          "functions": 80,
+          "lines": 80,
+          "statements": 80
+        }
+      }
+    },
+    {
+      "displayName": "config-package",
+      "testMatch": ["<rootDir>/packages/config/**/*.{test,spec}.{js,jsx,ts,tsx}"],
+      "testEnvironment": "node",
+      "transform": {
+        "^.+\\.(ts|tsx)$": "ts-jest"
+      },
+      "collectCoverageFrom": [
+        "<rootDir>/packages/config/**/*.{ts,tsx}",
+        "!<rootDir>/packages/config/**/*.d.ts",
+        "!<rootDir>/packages/config/**/*.config.{ts,js}",
+        "!<rootDir>/packages/config/**/coverage/**",
+        "!<rootDir>/packages/config/**/node_modules/**",
+        "!<rootDir>/packages/config/**/dist/**"
+      ],
+      "coverageDirectory": "<rootDir>/packages/config/coverage",
+      "coverageReporters": ["text", "lcov", "html", "json"],
+      "coverageThreshold": {
+        "global": {
+          "branches": 80,
+          "functions": 80,
+          "lines": 80,
+          "statements": 80
+        }
+      }
+    },
+    {
+      "displayName": "types-package",
+      "testMatch": ["<rootDir>/packages/types/**/*.{test,spec}.{js,jsx,ts,tsx}"],
+      "testEnvironment": "node",
+      "transform": {
+        "^.+\\.(ts|tsx)$": "ts-jest"
+      },
+      "collectCoverageFrom": [
+        "<rootDir>/packages/types/src/**/*.{ts,tsx}",
+        "!<rootDir>/packages/types/**/*.d.ts",
+        "!<rootDir>/packages/types/**/*.config.{ts,js}",
+        "!<rootDir>/packages/types/**/coverage/**",
+        "!<rootDir>/packages/types/**/node_modules/**",
+        "!<rootDir>/packages/types/**/dist/**"
+      ],
+      "coverageDirectory": "<rootDir>/packages/types/coverage",
+      "coverageReporters": ["text", "lcov", "html", "json"],
+      "coverageThreshold": {
+        "global": {
+          "branches": 80,
+          "functions": 80,
+          "lines": 80,
+          "statements": 80
+        }
+      }
+    }
+  ],
+  "collectCoverageFrom": [
+    "**/*.{js,jsx,ts,tsx}",
+    "!**/*.d.ts",
+    "!**/*.config.{js,ts}",
+    "!**/coverage/**",
+    "!**/node_modules/**",
+    "!**/.next/**",
+    "!**/dist/**",
+    "!**/build/**",
+    "!**/scripts/**",
+    "!**/.turbo/**"
+  ],
+  "coverageDirectory": "<rootDir>/coverage",
+  "coverageReporters": ["text", "lcov", "html", "json"],
+  "coverageThreshold": {
+    "global": {
+      "branches": 80,
+      "functions": 80,
+      "lines": 80,
+      "statements": 80
+    }
+  },
+  "testPathIgnorePatterns": [
+    "/node_modules/",
+    "/coverage/",
+    "/dist/",
+    "/build/",
+    "/.next/",
+    "/.turbo/"
+  ],
+  "moduleFileExtensions": ["ts", "tsx", "js", "jsx", "json"],
+  "transform": {
+    "^.+\\.(ts|tsx)$": "ts-jest"
+  },
+  "globals": {
+    "ts-jest": {
+      "tsconfig": "<rootDir>/tsconfig.json"
+    }
+  },
+  "verbose": true,
+  "testTimeout": 10000,
+  "maxWorkers": "50%",
+  "bail": false,
+  "cache": true,
+  "cacheDirectory": "<rootDir>/.jest-cache"
+}

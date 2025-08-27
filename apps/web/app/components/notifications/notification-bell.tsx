@@ -1,7 +1,7 @@
 'use client'
 
 import { Bell, Check } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@boilerplate/ui'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,11 +9,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Badge } from '@/components/ui/badge'
+} from '@boilerplate/ui'
+import { Badge } from '@boilerplate/ui'
 import { useNotifications } from '@/hooks/use-notifications'
 import { formatDistanceToNow } from 'date-fns'
-import { cn } from '@/lib/utils'
+import { cn } from '@boilerplate/ui'
 import { useLanguageSettings } from '@/hooks/use-settings-store'
 
 export function NotificationBell() {

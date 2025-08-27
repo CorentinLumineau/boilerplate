@@ -13,10 +13,10 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
+} from "@boilerplate/ui"
 // Update import to use the consolidated file
 import { useLanguageSettings } from "@/hooks/use-settings-store"
-import { Button } from "@/components/ui/button"
+import { Button } from "@boilerplate/ui"
 
 /**
  * Renders the application header with dynamic breadcrumb navigation and a user dropdown.
