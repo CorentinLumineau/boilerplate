@@ -3,7 +3,6 @@ import { render, RenderOptions } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from 'next-themes'
 
-// Create a custom render function that includes providers
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   queryClient?: QueryClient
   theme?: 'light' | 'dark' | 'system'
@@ -14,8 +13,7 @@ function createTestQueryClient() {
     defaultOptions: {
       queries: {
         retry: false,
-        staleTime: Infinity,
-        gcTime: Infinity,
+        gcTime: 0,
       },
       mutations: {
         retry: false,
@@ -24,18 +22,16 @@ function createTestQueryClient() {
   })
 }
 
-function AllTheProviders({ 
-  children, 
-  queryClient = createTestQueryClient(),
-  theme = 'light' 
-}: { 
+function AllTheProviders({ children, queryClient, theme = 'light' }: {
   children: React.ReactNode
   queryClient?: QueryClient
   theme?: 'light' | 'dark' | 'system'
 }) {
+  const testQueryClient = queryClient || createTestQueryClient()
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme={theme} enableSystem={false}>
+    <QueryClientProvider client={testQueryClient}>
+      <ThemeProvider attribute="class" defaultTheme={theme} enableSystem>
         {children}
       </ThemeProvider>
     </QueryClientProvider>
@@ -47,7 +43,7 @@ const customRender = (
   options: CustomRenderOptions = {}
 ) => {
   const { queryClient, theme, ...renderOptions } = options
-  
+
   return render(ui, {
     wrapper: ({ children }) => (
       <AllTheProviders queryClient={queryClient} theme={theme}>
@@ -58,62 +54,65 @@ const customRender = (
   })
 }
 
-// Re-export everything
 export * from '@testing-library/react'
-
-// Override render method
 export { customRender as render }
-
-// Export custom providers for specific test cases
 export { AllTheProviders, createTestQueryClient }
 
-// Common test data
+// Mock data for tests
 export const mockUser = {
   id: 'test-user-id',
   email: 'test@example.com',
   name: 'Test User',
   image: 'https://example.com/avatar.jpg',
-  emailVerified: new Date(),
-  createdAt: new Date(),
-  updatedAt: new Date(),
+  createdAt: new Date('2023-01-01'),
+  updatedAt: new Date('2023-01-01'),
 }
 
 export const mockSession = {
   user: mockUser,
-  expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+  expires: new Date('2024-01-01').toISOString(),
 }
 
-// Mock functions
 export const mockRouter = {
   push: jest.fn(),
   replace: jest.fn(),
-  prefetch: jest.fn(),
   back: jest.fn(),
   forward: jest.fn(),
   refresh: jest.fn(),
+  prefetch: jest.fn(),
 }
 
 export const mockSearchParams = new URLSearchParams()
-
 export const mockPathname = '/'
 
-// Test environment setup helpers
+// Test environment setup and cleanup
 export const setupTestEnvironment = () => {
-  // Reset all mocks before each test
-  jest.clearAllMocks()
-  
-  // Setup default environment variables
-  process.env.NODE_ENV = 'test'
-  process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test_db'
-  process.env.BETTER_AUTH_SECRET = 'test-secret-key'
+  // Mock window methods
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: jest.fn().mockImplementation(query => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    })),
+  })
+
+  Object.defineProperty(window, 'scrollTo', {
+    writable: true,
+    value: jest.fn(),
+  })
 }
 
 export const cleanupTestEnvironment = () => {
-  // Cleanup after each test
-  jest.resetAllMocks()
+  jest.clearAllMocks()
 }
 
-// Custom matchers for common assertions
+// Custom assertions
 export const expectElementToBeVisible = (element: HTMLElement) => {
   expect(element).toBeInTheDocument()
   expect(element).toBeVisible()
@@ -127,9 +126,9 @@ export const expectElementToHaveClass = (element: HTMLElement, className: string
   expect(element).toHaveClass(className)
 }
 
-// Async test helpers
+// Wait utilities
 export const waitForElementToBeRemoved = async (element: HTMLElement) => {
-  await new Promise(resolve => setTimeout(resolve, 0))
+  await new Promise(resolve => setTimeout(resolve, 100))
   expect(element).not.toBeInTheDocument()
 }
 
@@ -152,9 +151,9 @@ export const generateMockPosts = (count: number) => {
     id: `post-${i}`,
     title: `Post ${i}`,
     content: `Content for post ${i}`,
-    published: true,
     authorId: mockUser.id,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    published: true,
+    createdAt: new Date('2023-01-01'),
+    updatedAt: new Date('2023-01-01'),
   }))
 }
