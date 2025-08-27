@@ -389,12 +389,12 @@ describe('ToggleGroupItem', () => {
 
   it('handles name attribute', () => {
     render(
-      <ToggleGroup type="single">
+      <ToggleGroup type="single" value="item1">
         <ToggleGroupItem value="item1" name="toggle-name">Named Item</ToggleGroupItem>
       </ToggleGroup>
     )
     
-    const item = screen.getByRole('button', { name: 'Named Item' })
+    const item = screen.getByRole('radio', { name: 'Named Item' })
     expect(item).toHaveAttribute('name', 'toggle-name')
   })
 

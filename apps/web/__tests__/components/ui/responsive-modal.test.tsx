@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '../../utils/test-utils'
-import { ResponsiveModal } from '../../../app/components/ui/responsive-modal'
+import { ResponsiveModal } from '@boilerplate/ui'
 
 describe('ResponsiveModal Component', () => {
   const defaultProps = {

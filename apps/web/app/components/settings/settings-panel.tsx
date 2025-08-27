@@ -4,8 +4,8 @@ import { useTheme } from "next-themes"
 import { Moon, Sun, Monitor } from "lucide-react"
 import { FlagGB, FlagFR } from "@/components/flags"
 
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { cn } from "@/lib/utils"
+import { ToggleGroup, ToggleGroupItem } from "@boilerplate/ui"
+import { cn } from "@boilerplate/ui"
 
 // Update imports to use the consolidated file
 import { useThemeSettings, useLanguageSettings } from "@/hooks/use-settings-store"
