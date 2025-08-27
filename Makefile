@@ -16,7 +16,7 @@ PROJECT_NAME ?= boilerplate
 # Construct DATABASE_URL from environment variables
 DATABASE_URL := postgresql://$(DB_USER):$(DB_PASSWORD)@localhost:5432/$(DB_NAME)
 
-.PHONY: all help db-up db-down db-restart db-logs db-clean db-migrate db-migrate-deploy db-migrate-reset db-studio dev dev-backend dev-frontend build install clean version-patch version-minor version-major version-sync release-patch release-minor release-major
+.PHONY: all help db-up db-down db-restart db-logs db-clean db-migrate db-migrate-deploy db-migrate-reset db-studio dev dev-backend dev-frontend build install clean test test-watch test-coverage test-ci version-patch version-minor version-major version-sync release-patch release-minor release-major
 
 # Default target - show help
 help:
@@ -38,6 +38,10 @@ help:
 	@echo "  make build        - Build all apps"
 	@echo "  make install      - Install all dependencies"
 	@echo "  make clean        - Clean build outputs"
+	@echo "  make test         - Run all tests"
+	@echo "  make test-watch   - Run tests in watch mode"
+	@echo "  make test-coverage - Run tests with coverage report"
+	@echo "  make test-ci      - Run tests for CI environment"
 	@echo ""
 	@echo "Database Configuration:"
 	@echo "  DB_USER: $(DB_USER)"
@@ -143,6 +147,23 @@ install:
 clean:
 	@echo "Cleaning build outputs..."
 	pnpm clean
+
+# Testing commands
+test:
+	@echo "Running all tests..."
+	pnpm test
+
+test-watch:
+	@echo "Running tests in watch mode..."
+	pnpm test:watch
+
+test-coverage:
+	@echo "Running tests with coverage report..."
+	pnpm test:coverage
+
+test-ci:
+	@echo "Running tests for CI environment..."
+	pnpm test:ci
 
 # Quick setup for new developers
 setup: install db-up
