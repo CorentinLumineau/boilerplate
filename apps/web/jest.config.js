@@ -21,6 +21,7 @@ const customJestConfig = {
     '!app/**/error.tsx',
     '!app/**/not-found.tsx',
     '!app/globals.css',
+    '!__tests__/**',
   ],
   coverageThreshold: {
     global: {

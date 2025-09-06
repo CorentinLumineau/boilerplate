@@ -94,13 +94,79 @@ export const createMockSession = (overrides = {}) => ({
 });
 
 // Helper for testing error boundaries
-export const TestErrorBoundary: React.FC<{ 
-  children: React.ReactNode;
-  onError?: (error: Error) => void;
-}> = ({ children, onError }) => {
-  return (
-    <div data-testid="error-boundary">
-      {children}
-    </div>
-  );
+export class TestErrorBoundary extends React.Component<
+  { 
+    children: React.ReactNode;
+    onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+    fallback?: React.ReactNode;
+  },
+  { hasError: boolean; error?: Error }
+> {
+  constructor(props: TestErrorBoundary['props']) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    this.props.onError?.(error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || (
+        <div data-testid="error-boundary" role="alert">
+          <h2>Something went wrong:</h2>
+          <p>{this.state.error?.message}</p>
+        </div>
+      );
+    }
+
+    return (
+      <div data-testid="error-boundary">
+        {this.props.children}
+      </div>
+    );
+  }
+}
+
+// Utility to trigger error boundary in tests
+export const ThrowError: React.FC<{ shouldThrow?: boolean; message?: string }> = ({ 
+  shouldThrow = true, 
+  message = 'Test error' 
+}) => {
+  if (shouldThrow) {
+    throw new Error(message);
+  }
+  return null;
+};
+
+// Additional test utilities for async operations
+export const waitForNextTick = () => new Promise(resolve => setTimeout(resolve, 0));
+
+export const waitForCondition = async (
+  condition: () => boolean | Promise<boolean>,
+  timeout = 5000,
+  interval = 100
+): Promise<void> => {
+  const startTime = Date.now();
+  
+  while (Date.now() - startTime < timeout) {
+    if (await condition()) {
+      return;
+    }
+    await new Promise(resolve => setTimeout(resolve, interval));
+  }
+  
+  throw new Error(`Condition not met within ${timeout}ms`);
+};
+
+// Mock implementation helpers
+export const createMockFunction = <T extends (...args: any[]) => any>(
+  implementation?: T
+): jest.MockedFunction<T> => {
+  return jest.fn(implementation) as jest.MockedFunction<T>;
 };

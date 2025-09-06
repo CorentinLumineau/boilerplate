@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom';
 import { setupServer } from 'msw/node';
 import { handlers } from './__tests__/setup/msw-setup';
+import { TEST_DATABASE, TEST_AUTH } from './__tests__/config/test-credentials';
 
 // Mock Next.js router
 jest.mock('next/navigation', () => ({
@@ -45,7 +46,7 @@ afterAll(() => {
   server.close();
 });
 
-// Mock environment variables
+// Mock environment variables - using secure test configuration
 process.env.NODE_ENV = 'test';
-process.env.NEXTAUTH_SECRET = 'test-secret';
-process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test_db';
+process.env.NEXTAUTH_SECRET = TEST_AUTH.SECRET;
+process.env.DATABASE_URL = TEST_DATABASE.URL;

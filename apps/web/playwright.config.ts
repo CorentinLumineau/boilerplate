@@ -28,6 +28,15 @@ export default defineConfig({
     
     /* Record video on failure */
     video: 'retain-on-failure',
+    
+    /* Better debugging experience - headless mode based on DEBUG env var */
+    headless: !process.env.DEBUG,
+    
+    /* Action timeout */
+    actionTimeout: 10000,
+    
+    /* Navigation timeout */
+    navigationTimeout: 30000,
   },
 
   /* Configure projects for major browsers */

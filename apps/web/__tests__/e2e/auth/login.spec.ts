@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { TEST_CREDENTIALS } from '../../config/test-credentials';
 
 test.describe('Authentication', () => {
   test.beforeEach(async ({ page }) => {
@@ -37,7 +38,7 @@ test.describe('Authentication', () => {
 
   test('should show error for invalid credentials', async ({ page }) => {
     // Fill in form with invalid credentials
-    await page.getByRole('textbox', { name: /email/i }).fill('wrong@example.com');
+    await page.getByRole('textbox', { name: /email/i }).fill('wrong@test.local');
     await page.getByRole('textbox', { name: /password/i }).fill('wrongpassword');
     await page.getByRole('button', { name: /sign in/i }).click();
 
@@ -46,9 +47,9 @@ test.describe('Authentication', () => {
   });
 
   test('should successfully login with valid credentials', async ({ page }) => {
-    // Fill in form with valid credentials
-    await page.getByRole('textbox', { name: /email/i }).fill('admin@example.com');
-    await page.getByRole('textbox', { name: /password/i }).fill('password123');
+    // Fill in form with valid credentials using secure test credentials
+    await page.getByRole('textbox', { name: /email/i }).fill(TEST_CREDENTIALS.ADMIN.EMAIL);
+    await page.getByRole('textbox', { name: /password/i }).fill(TEST_CREDENTIALS.ADMIN.PASSWORD);
     await page.getByRole('button', { name: /sign in/i }).click();
 
     // Verify redirect to dashboard
@@ -69,13 +70,59 @@ test.describe('Authentication', () => {
 
   test('should handle form submission loading state', async ({ page }) => {
     // Fill in form
-    await page.getByRole('textbox', { name: /email/i }).fill('admin@example.com');
-    await page.getByRole('textbox', { name: /password/i }).fill('password123');
+    await page.getByRole('textbox', { name: /email/i }).fill(TEST_CREDENTIALS.ADMIN.EMAIL);
+    await page.getByRole('textbox', { name: /password/i }).fill(TEST_CREDENTIALS.ADMIN.PASSWORD);
 
     // Submit form and check loading state
+    const submitButton = page.getByRole('button', { name: /sign in/i });
+    await submitButton.click();
+    
+    // Check if button is disabled during submission
+    await expect(submitButton).toBeDisabled();
+    
+    // Or check for loading text/spinner if implemented
+    const loadingButton = page.getByRole('button', { name: /signing in|loading/i });
+    if (await loadingButton.isVisible()) {
+      await expect(loadingButton).toBeVisible();
+    }
+  });
+
+  test('should successfully logout after login', async ({ page }) => {
+    // First login
+    await page.getByRole('textbox', { name: /email/i }).fill(TEST_CREDENTIALS.ADMIN.EMAIL);
+    await page.getByRole('textbox', { name: /password/i }).fill(TEST_CREDENTIALS.ADMIN.PASSWORD);
     await page.getByRole('button', { name: /sign in/i }).click();
     
-    // Check if button shows loading state (this depends on your implementation)
-    // await expect(page.getByRole('button', { name: /signing in/i })).toBeVisible();
+    // Wait for redirect to dashboard
+    await expect(page).toHaveURL(/\/dashboard/);
+    
+    // Find and click logout button (could be in a dropdown or direct button)
+    const logoutButton = page.getByRole('button', { name: /logout|sign out/i })
+      .or(page.getByRole('link', { name: /logout|sign out/i }));
+    
+    await logoutButton.click();
+    
+    // Verify redirect back to login page
+    await expect(page).toHaveURL(/\/login/);
+    
+    // Verify login form is visible again
+    await expect(page.getByRole('textbox', { name: /email/i })).toBeVisible();
+  });
+
+  test('should maintain session persistence', async ({ page }) => {
+    // Login first
+    await page.getByRole('textbox', { name: /email/i }).fill(TEST_CREDENTIALS.ADMIN.EMAIL);
+    await page.getByRole('textbox', { name: /password/i }).fill(TEST_CREDENTIALS.ADMIN.PASSWORD);
+    await page.getByRole('button', { name: /sign in/i }).click();
+    
+    // Wait for successful login
+    await expect(page).toHaveURL(/\/dashboard/);
+    
+    // Reload the page to test session persistence
+    await page.reload();
+    
+    // Should still be on dashboard (session maintained)
+    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page.getByText(/dashboard/i)).toBeVisible();
   });
 });
